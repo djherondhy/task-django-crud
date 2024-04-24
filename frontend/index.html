@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyTasks</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/preset.css">
+    <script src="pluguins/jquery-3.6.4.min.js"></script>
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+
+<body>
+    <div class="update_box">
+        <div class="form_update">
+            <button class="close_btn" id="close_update"><i class='bx bx-x'></i></button>
+            <p><i class='bx bx-edit'></i>Editar Tarefa</p>
+            <form action="" id="edit_form">
+                <div class="agroup">
+                    <label for="">Descrição</label>
+                    <input type="text" placeholder="Descrição" id="edit_descricao">
+                </div>
+                <div class="agroup">
+                    <label for="">Status</label>
+                    <select name="" id="edit_status">
+                        <option value="true">Concluída</option>
+                        <option value="false">Não Concluída</option>
+                    </select>
+                </div>
+                <button><i class='bx bx-edit'></i> Salvar</button>
+            </form>
+        </div>
+    </div>
+    <div class="content">
+        <div class="tarefas_box">
+            <h1>Seja Bem Vindo ao My Task!</h1>
+            <div class="add_form">
+                <form action="" id="taskForm">
+                    <input type="text" placeholder="Descrição da atividade" id="taskInput">
+                    <button><i class='bx bx-add-to-queue'></i> Adicionar</button>
+                </form>
+            </div>
+            <div class="tarefas_list">
+                <p> <i class='bx bx-task'></i> Minhas Tarefas</p>
+                <div class="tarefa_card">
+                    <div class="infos">
+                        <p class="desc"> Atualizar base de dados</p>
+                        <p class="status">Criada</p>
+                    </div>
+                    <div class="actions">
+                        <button>Concluir Tarefa</button>
+                        <button class="btn"><i class='bx bx-edit'></i></button>
+                        <button class="btn"><i class='bx bx-trash-alt'></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $('.update_box').hide();
+        $('.close_btn').click(function(){
+            $('.update_box').fadeOut('slow');
+        });
+        $('#taskForm').submit(function (event) {
+            event.preventDefault();
+
+            const taskTitle = $('#taskInput').val();
+
+            $.post('http://127.0.0.1:8000/api/data/', { descricao: taskTitle })
+                .done(function () {
+                    loadTasks();
+                    $('#taskInput').val('');
+                });
+        });
+
+
+
+        function loadTasks() {
+            $.get('http://127.0.0.1:8000/api/', function (data) {
+                $('.tarefas_list .tarefa_card').remove();
+
+                tam = data.length;
+                const clear_text = $('<p class="n_tarefas">').text('Nenhuma Tarefa Registrada!')
+                if(tam == 0){
+                    $('.tarefas_list').append(clear_text);
+                }else{
+                    $('.tarefas_list .n_tarefas').remove()
+                }
+             
+                $.each(data, function (index, task) {
+                    const status = task.status ? 'Concluída' : 'Não Concluída';
+                    const status_class = task.status ? 'concluida' : 'n_concluida';
+                   
+                    
+
+                 
+                    $('.tarefas_list').append('<div class="tarefa_card">'
+                        + '<div class="infos">'
+                        + '<p class="desc "> ' + task.descricao + '</p>'
+                        + '<p class="status ' + status_class + '">' + status + '</p>'
+                        + '</div>'
+                        + '<div class="actions">'
+                        + '<button class="btn" onclick="loadTaskUpdate(' + task.id + ')""><i class="bx bx-edit"></i></button>'
+                        + '<button class="btn" onclick="deleteTask(' + task.id + ')"><i class="bx bx-trash-alt"></i></button>'
+                        + '</div>'
+                        + '</div>')
+                    
+
+                });
+            });
+        }
+
+        function deleteTask(taskId) {
+            $.ajax({
+                url: 'http://127.0.0.1:8000/api/data/',
+                type: 'DELETE',
+                contentType: 'application/json',
+                data: JSON.stringify({ id: taskId }),
+                success: function () {
+                    loadTasks();
+                }
+            });
+        }
+
+        function loadTaskUpdate(taskId){
+            $('.update_box').fadeIn('slow')
+            $.get('http://127.0.0.1:8000/api/tarefa/' + taskId, function (data) {
+                console.log(data)
+                $('#edit_descricao').val(data.descricao)
+            });
+
+            $('#edit_form').submit(function(e){
+                e.preventDefault()
+                const newTitle = $('#edit_descricao').val();
+                const newStatus = $('#edit_status').val();
+              updateTask(taskId, newTitle, newStatus)
+            })
+            
+        }
+        function updateTask(taskId, newTitle, newStatus) {
+            $.ajax({
+                url: 'http://127.0.0.1:8000/api/tarefa/' + taskId,
+                type: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({ descricao: newTitle, status : newStatus }),
+                success: function () {
+                    loadTasks();
+                    $('.update_box').fadeOut('slow');
+                }
+            });
+        }
+
+        function markAsComplete(taskId) {
+            $.ajax({
+                url: 'http://127.0.0.1:8000/api/tarefa/' + taskId,
+                type: 'PATCH',
+                contentType: 'application/json',
+                data: JSON.stringify({ status: "true" }), // Altera o status para true
+                success: function () {
+                    loadTasks();
+                }
+            });
+        }
+
+        loadTasks();
+    </script>
+</body>
+
+</html>
